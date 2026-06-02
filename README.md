@@ -130,6 +130,18 @@ python export_accounts.py                      # 全部平台
 python export_accounts.py claude chatgpt       # 指定平台
 ```
 
+### 批量解锁被锁的 Outlook 账号
+BitBrowser + Playwright,复用注册同款 PX 按压验证逻辑;按结果分类输出到
+`unlock_results/`(`unlocked_*` 成功 / `needs_phone_*` 需短信 / `failed_*` 失败)。
+打码 key 走环境变量 `EZCAPTCHA_API_KEY`。
+```bash
+python unlock_outlook.py                                       # 自动找最新的 locked 文件
+python unlock_outlook.py --input outlook_accounts/accounts.txt # 指定账号文件
+python unlock_outlook.py --input emails_locked.txt --concurrency 2
+python unlock_outlook.py --input accounts.txt --proxy-file proxies.txt
+```
+> 输入每行 `email----password`（可带额外字段）。解锁后再跑下面的 token 提取。
+
 ### 提取 Outlook 的 Graph OAuth refresh_token
 纯 `requests` 模拟 OAuth2 授权码流程（免浏览器），用账号密码换取
 Microsoft Graph 的 `refresh_token`，输出 `email----password----refresh_token----client_id`，
