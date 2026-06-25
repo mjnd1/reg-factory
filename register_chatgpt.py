@@ -363,11 +363,12 @@ async def extract_codex(page, email, p=None, ctx=None):
     # 手动填号给足人操作时间(≥300)；自动接码换号多次(CODEX_ADDPHONE_ATTEMPTS×CODEX_SMS_TIMEOUT)
     # 可能数分钟，超时按换号预算抬足（过 add-phone 后 drive_authorize 还会再续期捕获窗口）。
     import os as _os
-    _ph_budget = int(_os.environ.get("CODEX_ADDPHONE_ATTEMPTS", "8")) * int(_os.environ.get("CODEX_SMS_TIMEOUT", "150"))
+    _ph_budget = int(_os.environ.get("CODEX_ADDPHONE_ATTEMPTS", "2")) * int(_os.environ.get("CODEX_SMS_TIMEOUT", "150"))
     timeout = max(CODEX_TIMEOUT, 300, _ph_budget + 120)
-    # 实测 8/8 新号 OAuth 必弹手机(手机要求绑账号、不绑会话，换会话/重开窗口都省不掉)，
-    # 故默认 0=直接接码最快。老号(养过几天)再授权可能不弹，可设 CODEX_PHONE_SKIP_ATTEMPTS>0 赌免手机。
-    skip_n = int(_os.environ.get("CODEX_PHONE_SKIP_ATTEMPTS", "0") or "0")
+    # 免手机直连尝试次数：每次都重开窗口+cookie重登+重新生成 auth_url(全新会话=重摇风控骰子)，
+    # 弹手机就跳过本次换下一次赌，N 次都弹才在最后一次真接码。默认 3(按预期多赌几次免手机)。
+    # 实测部分新号 OAuth 必弹手机(手机要求偏向绑账号)，赌不到就走接码；想直接接码设 0。
+    skip_n = int(_os.environ.get("CODEX_PHONE_SKIP_ATTEMPTS", "3") or "3")
     try:
         # SUB2API: 登录 + 找 openai 分组（PKCE/换码由 SUB2API 包办）
         token = ox.sub2api_login(origin, SUB2API_EMAIL, SUB2API_PASSWORD)
@@ -375,9 +376,11 @@ async def extract_codex(page, email, p=None, ctx=None):
         print(f"  [codex] SUB2API: group={group}(#{group_id})，免手机直连先试 {skip_n} 次，弹手机才接码")
 
         # 每次尝试关窗口重开+重登(cookie)，确保是 OpenAI 眼里全新会话(同窗口重发 auth_url
-        # 不改变其"要不要手机"的风控决定)。需 p(playwright) + ctx(导出 cookie)。
+        # 不改变其"要不要手机"的风控决定)，且避开刚注册窗口的促销弹层(Claim offer 等会挡住
+        # 授权页 goto/consent，实测 in-register 复用脏窗口卡死、standalone 重开干净窗口就过)。
+        # 故只要有 p+ctx 就总是重开窗口授权(不再限 skip_n>0)，让首次/唯一一次尝试也走干净窗口。
         reset_fn = None
-        if p is not None and ctx is not None and skip_n > 0:
+        if p is not None and ctx is not None:
             try:
                 cookies = await ctx.cookies()
                 reset_fn = ox.make_reset_page(p, cookies, account_email=email)
@@ -553,6 +556,10 @@ async def register_one(index, total, p):
                 prelogged = await prelogin_outlook(mail_page, email, email_pw)
                 mail_logged_in = prelogged
                 print(f"  [2.5] outlook prelogin: {'ready' if prelogged else 'failed'}")
+                # 登录后稍等 10s 再发码：刚登录 Outlook 收件箱/同步还没就绪，立刻发码易"码到了却没同步进来"。
+                if prelogged:
+                    print("  [2.5] prelogin ready, 等 10s 让收件箱就绪再发码...")
+                    await asyncio.sleep(10)
             except Exception as e:
                 print(f"  [2.5] prelogin error: {str(e)[:60]}")
         # 提交：按钮文本中/英/日多语言精确匹配，避免点到 Continue with Google/Apple

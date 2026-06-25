@@ -63,8 +63,8 @@ async def main():
                         help="add-phone 手动模式:不接码,自己在浏览器填号+输码(如 WhatsApp 码)")
     parser.add_argument("--phone", default="",
                         help="add-phone 半自动:脚本填该号(E.164,如 +8618001623966)+选 WhatsApp+发送,你只手输码")
-    parser.add_argument("--phone-skip", type=int, default=0,
-                        help="先赌免手机直连的次数(默认0=直接接码)：每次关窗重开+重登重摇风控，弹手机就跳过；用尽才接码。实测新号必弹手机，老号可设>0 试")
+    parser.add_argument("--phone-skip", type=int, default=3,
+                        help="先赌免手机直连的次数(默认3)：每次关窗重开+重登重摇风控，弹手机就跳过；用尽才接码。想直接接码设 0")
     parser.add_argument("--skip-cpa", action="store_true",
                         help="不把 OAuth 凭据推到 CPA(默认 CPA 配好就推,带真 refresh_token)")
     parser.add_argument("--keep", action="store_true", help="失败保留窗口")
@@ -73,7 +73,7 @@ async def main():
     # 手动/半自动填号收码需要人操作时间；自动接码换号多次(CODEX_ADDPHONE_ATTEMPTS×CODEX_SMS_TIMEOUT)
     # 也可能耗时数分钟，超时给足，避免 add-phone 还在换号就被授权捕获超时打断。
     import os as _os
-    _ph_budget = int(_os.environ.get("CODEX_ADDPHONE_ATTEMPTS", "8")) * int(_os.environ.get("CODEX_SMS_TIMEOUT", "150"))
+    _ph_budget = int(_os.environ.get("CODEX_ADDPHONE_ATTEMPTS", "2")) * int(_os.environ.get("CODEX_SMS_TIMEOUT", "150"))
     timeout = max(args.timeout, 300, _ph_budget + 120)
 
     if not (SUB2API_URL and SUB2API_EMAIL and SUB2API_PASSWORD):
