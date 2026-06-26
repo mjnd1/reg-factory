@@ -350,10 +350,20 @@ def _smsman_get_phone(app, country_id="0", max_price="", blacklist=()):
             return None  # 账号级错误，逐国无意义，直接退（回退到 firefox/hero）
         if res:
             return res
-    # 价格表拿不到(经代理偶发 SSL 失败)或逐国都没要到 → 不要用 country=0(sms-man 拒"country field
-    # is wrong")，直接返回 None 让上层回退 firefox/hero。
+    # 价格表拿不到(get-prices 经常 500/抽风)时**不要直接放弃**——回退逐个试常备有货国家。
+    # sms-man country_id: 7印尼 6马来 16英国 12美国 4菲律宾 22印度 36柬埔寨 117越南 14西班牙 ...
     if not ranked:
-        print("  [sms-man] 价格表为空(取价失败/无货)，跳过 sms-man，回退兜底渠道")
+        bl = {str(b) for b in blacklist}
+        fallback = [c for c in ("7", "6", "16", "22", "117", "36", "4", "12", "14", "10")
+                    if c not in bl]
+        print(f"  [sms-man] 价格表取不到(接口故障)，回退逐国试租 {len(fallback)} 个常备国家...")
+        for c in fallback:
+            res = _smsman_request_number(app_id, c, max_price)
+            if res == "FATAL":
+                return None
+            if res:
+                return res
+        print("  [sms-man] 回退国家也都无货，跳过 sms-man，回退兜底渠道")
     return None
 
 
