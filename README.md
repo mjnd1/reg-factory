@@ -51,10 +51,17 @@
 
 ## 1. 前置条件
 
-### ① 指纹浏览器 BitBrowser / AdsPower
-- 默认使用 BitBrowser：安装并**启动**比特浏览器客户端，确保本地 API 在线（默认 `http://127.0.0.1:54345`）。
-- 如需使用 AdsPower：启动 AdsPower 客户端并开启 Local API（默认 `http://127.0.0.1:50325`），在 `.env` 设置 `FINGERPRINT_BROWSER=adspower`。
-- 客户端要保持运行——脚本通过本地 API 创建/打开/关闭浏览器窗口。
+### ① 指纹浏览器（二选一）
+
+**选项 A：BitBrowser（默认）**
+- 安装并**启动**比特浏览器客户端，确保本地 API 在线（默认 `http://127.0.0.1:54345`）。
+- `.env` 保持 `FINGERPRINT_BROWSER=bitbrowser`，或不填该项。
+
+**选项 B：AdsPower**
+- 安装并**启动** AdsPower 客户端，开启 Local API（默认 `http://127.0.0.1:50325`）。
+- 在 `.env` 设置 `FINGERPRINT_BROWSER=adspower`，并按本机 AdsPower 配置填写 `ADSPOWER_API_KEY`（启用鉴权时必填）。
+
+客户端要保持运行——脚本通过本地 API 创建/打开/关闭浏览器窗口。
 
 ### ② Clash Verge（开启 API 权限）
 - 安装 Clash Verge 并导入你的机场订阅，选一个节点并开启「系统代理 / Tun 模式」。
